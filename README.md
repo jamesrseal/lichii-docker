@@ -21,15 +21,18 @@ click re-enables them.
 
 ## Running on Unraid
 
-1. Install **steam-headless** from Community Apps (needs the Nvidia-Driver plugin).
-2. In the template, change **Repository** to `ghcr.io/jamesrseal/lichii-docker:latest`.
-3. Advanced View → Extra Parameters must include `--runtime=nvidia`. Network type: `host`.
-4. Set `ENABLE_SUNSHINE=true`, and `SUNSHINE_USER` / `SUNSHINE_PASS` to your own values.
-   Set `ENABLE_STEAM=false` if you don't want Steam starting too.
-5. Keep the `/home/default` mapping on appdata: Lichii's keys, firmware, saves and shader cache live there.
-   Point `/mnt/games` at your game dumps.
-6. Start it, open `https://<server-ip>:47990` to pair Moonlight with a PIN, then launch **Lichii** from
-   Moonlight (or **Desktop** to set things up with a mouse first).
+The image is based on Steam Headless **v1** (`josh5/steam-headless:debian`). The steam-headless template in
+Community Apps now targets v2, which is laid out differently, so use `docker-compose.yml` from this repo instead.
 
-If the package is private, add a GitHub token with `read:packages` under Unraid's Docker registry login.
-Updates arrive through Unraid's normal "update available" check.
+1. Install the **Nvidia-Driver** and **Docker Compose Manager** plugins.
+2. Add a new stack, paste in `docker-compose.yml`, and edit:
+   - the two `appdata` paths and the games path
+   - `SUNSHINE_USER` / `SUNSHINE_PASS` / `USER_PASSWORD`
+3. Compose up. The browser desktop is at `http://<server-ip>:8083` for first-time setup (keys, firmware,
+   game folder `/mnt/games`, controller mapping).
+4. Open `https://<server-ip>:47990` to pair Moonlight with a PIN, then launch **Lichii** from Moonlight.
+
+The container uses host networking; keep it LAN/VPN-only.
+
+If the package is private, log Unraid's Docker in to `ghcr.io` with a GitHub token that has `read:packages`.
+To update, pull and recreate the stack (Compose Manager's *Update Stack*).

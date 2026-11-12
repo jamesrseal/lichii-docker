@@ -1,0 +1,52 @@
+# Lichii on Steam Headless v1 for an Unraid host with an NVIDIA GPU.
+# Edit the three host paths and the Sunshine credentials before starting.
+services:
+  lichii:
+    image: ghcr.io/jamesrseal/lichii-docker:latest
+    container_name: lichii
+    restart: unless-stopped
+    runtime: nvidia
+    network_mode: host          # needed for Moonlight discovery and controller input
+    hostname: lichii
+    extra_hosts:
+      - "lichii:127.0.0.1"
+    shm_size: 2G
+    ipc: host
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 524288
+    cap_add: [NET_ADMIN, SYS_ADMIN, SYS_NICE]
+    security_opt:
+      - seccomp:unconfined
+      - apparmor:unconfined
+    devices:
+      - /dev/fuse
+      - /dev/uinput
+    device_cgroup_rules:
+      - "c 13:* rmw"
+    environment:
+      - TZ=America/New_York
+      - PUID=99
+      - PGID=100
+      - UMASK=000
+      - USER_PASSWORD=change-me
+      - MODE=primary
+      - WEB_UI_MODE=vnc         # browser desktop on port 8083; set to none to disable
+      - PORT_NOVNC_WEB=8083
+      - ENABLE_VNC_AUDIO=true
+      - ENABLE_STEAM=false
+      - ENABLE_SUNSHINE=true
+      - SUNSHINE_USER=change-me
+      - SUNSHINE_PASS=change-me
+      - ENABLE_EVDEV_INPUTS=true
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      # Home directory: Lichii keys, firmware, saves, shader cache, Sunshine pairing.
+      - /mnt/user/appdata/lichii/home:/home/default:rw
+      # Your game dumps.
+      - /mnt/user/games/switch:/mnt/games:rw
+      # Xorg and PulseAudio sockets.
+      - /mnt/user/appdata/lichii/sockets/.X11-unix:/tmp/.X11-unix:rw
+      - /mnt/user/appdata/lichii/sockets/pulse:/tmp/pulse:rw

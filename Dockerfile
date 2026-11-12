@@ -1,7 +1,9 @@
 # Lichii (Switch / Switch 2 emulator) on top of Steam Headless, which provides
 # the NVIDIA-accelerated Xorg desktop and the Sunshine streaming server.
-# The AppImage needs glibc >= 2.39; the build prints the base's glibc version.
-ARG BASE_IMAGE=josh5/steam-headless:latest
+# Pinned to the v1 (Debian 13, Xorg + supervisord) line via the :debian tag. :latest is now
+# Steam Headless v2 (Fedora, Wayland, systemd), which has a different layout this image does not target.
+# The AppImage needs glibc >= 2.39; Debian 13 ships 2.41.
+ARG BASE_IMAGE=josh5/steam-headless:debian
 FROM ${BASE_IMAGE}
 
 # Set by the GitHub Actions workflow from the upstream release.
@@ -10,22 +12,10 @@ ARG LICHII_URL
 
 RUN set -eux \
     && test -n "${LICHII_TAG}" && test -n "${LICHII_URL}" \
-    && echo "PATH=${PATH}" && cat /etc/os-release \
-    && (ls /usr/bin /usr/sbin /bin /sbin 2>/dev/null | grep -E "^(apt|apt-get|dpkg|pacman|dnf|rpm|zypper|apk)$" || true) \
-    && export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH}" \
-    # The base image has shipped as both Debian and Arch; support either.
-    && if command -v apt-get >/dev/null; then \
-           apt-get update \
-           && apt-get install -y --no-install-recommends \
-               ca-certificates curl jq libxcb-cursor0 libvulkan1 \
-           && rm -rf /var/lib/apt/lists/*; \
-       elif command -v pacman >/dev/null; then \
-           pacman -Sy --noconfirm --needed \
-               ca-certificates curl jq xcb-util-cursor vulkan-icd-loader \
-           && pacman -Scc --noconfirm; \
-       else \
-           echo "Unsupported base image: no apt-get or pacman" >&2; exit 1; \
-       fi \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates curl jq libxcb-cursor0 libvulkan1 \
+    && rm -rf /var/lib/apt/lists/* \
     && ldd --version | head -1 \
     # Containers have no FUSE at build time, so unpack the AppImage instead of mounting it.
     && cd /tmp \
