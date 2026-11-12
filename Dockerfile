@@ -10,6 +10,9 @@ ARG LICHII_URL
 
 RUN set -eux \
     && test -n "${LICHII_TAG}" && test -n "${LICHII_URL}" \
+    && echo "PATH=${PATH}" && cat /etc/os-release \
+    && (ls /usr/bin /usr/sbin /bin /sbin 2>/dev/null | grep -E "^(apt|apt-get|dpkg|pacman|dnf|rpm|zypper|apk)$" || true) \
+    && export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:${PATH}" \
     # The base image has shipped as both Debian and Arch; support either.
     && if command -v apt-get >/dev/null; then \
            apt-get update \
@@ -23,7 +26,7 @@ RUN set -eux \
        else \
            echo "Unsupported base image: no apt-get or pacman" >&2; exit 1; \
        fi \
-    && cat /etc/os-release && ldd --version | head -1 \
+    && ldd --version | head -1 \
     # Containers have no FUSE at build time, so unpack the AppImage instead of mounting it.
     && cd /tmp \
     && curl -fL --retry 3 -o lichii.AppImage "${LICHII_URL}" \
