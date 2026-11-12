@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
-# Launch the unpacked Lichii AppImage on the container's Xorg display.
-export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+# Launch the unpacked Lichii AppImage inside the Steam Headless desktop session.
+# The session is KDE on Wayland with Xwayland; run Lichii through Xwayland by default
+# (set LICHII_QT_PLATFORM=wayland to try native Wayland).
+if [[ -n "${LICHII_QT_PLATFORM:-}" ]]; then
+    export QT_QPA_PLATFORM="${LICHII_QT_PLATFORM}"
+elif [[ -n "${DISPLAY:-}" ]]; then
+    export QT_QPA_PLATFORM=xcb
+fi
 exec /opt/lichii/AppRun "$@"

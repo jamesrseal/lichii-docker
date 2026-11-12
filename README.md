@@ -2,7 +2,7 @@
 
 [Lichii](https://github.com/zortos293/Lichii) (experimental Switch / Switch 2 emulator) packaged on top of
 [Steam Headless](https://github.com/Steam-Headless/docker-steam-headless), which supplies the GPU-accelerated
-desktop and the Sunshine server you connect to with Moonlight.
+KDE desktop and the Sunshine server you connect to with Moonlight.
 
 Image: `ghcr.io/jamesrseal/lichii-docker:latest` (also tagged per upstream build for rollback).
 
@@ -21,18 +21,15 @@ click re-enables them.
 
 ## Running on Unraid
 
-The image is based on Steam Headless **v1** (`josh5/steam-headless:debian`). The steam-headless template in
-Community Apps now targets v2, which is laid out differently, so use `docker-compose.yml` from this repo instead.
+The image is `josh5/steam-headless:2` with Lichii added, so it is a drop-in replacement for an existing
+Steam Headless v2 container.
 
-1. Install the **Nvidia-Driver** and **Docker Compose Manager** plugins.
-2. Add a new stack, paste in `docker-compose.yml`, and edit:
-   - the two `appdata` paths and the games path
-   - `SUNSHINE_USER` / `SUNSHINE_PASS` / `USER_PASSWORD`
-3. Compose up. The browser desktop is at `http://<server-ip>:8083` for first-time setup (keys, firmware,
-   game folder `/mnt/games`, controller mapping).
-4. Open `https://<server-ip>:47990` to pair Moonlight with a PIN, then launch **Lichii** from Moonlight.
+1. Make the `lichii-docker` package public on GitHub (or log Unraid's Docker in to `ghcr.io` with a token
+   that has `read:packages`).
+2. Edit the steam-headless container and change **Repository** from `josh5/steam-headless:2` to
+   `ghcr.io/jamesrseal/lichii-docker:latest`. Leave everything else as it is and click Apply.
+3. In the Steam Headless web desktop, open **Lichii** from the application menu for first-time setup
+   (keys, firmware, game folder under `/mnt/games`, controller mapping). Its data lives in the User Profile path.
+4. In Moonlight, launch **Lichii**. Quitting the app from Moonlight closes the emulator.
 
-The container uses host networking; keep it LAN/VPN-only.
-
-If the package is private, log Unraid's Docker in to `ghcr.io` with a GitHub token that has `read:packages`.
-To update, pull and recreate the stack (Compose Manager's *Update Stack*).
+New Lichii builds show up as a normal "update available" on Unraid's Docker tab.

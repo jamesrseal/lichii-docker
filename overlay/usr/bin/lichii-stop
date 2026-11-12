@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Close Lichii when the Moonlight session is quit. Lichii can hang on shutdown,
+# so escalate to SIGKILL if it has not exited after a few seconds.
+pattern='[/]opt/lichii/'
+pkill -TERM -f "${pattern}" || exit 0
+for _ in {1..10}; do
+    pgrep -f "${pattern}" >/dev/null || exit 0
+    sleep 0.5
+done
+pkill -KILL -f "${pattern}" || true
+exit 0

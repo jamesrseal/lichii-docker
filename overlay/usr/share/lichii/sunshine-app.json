@@ -1,0 +1,13 @@
+{
+  "name": "Lichii",
+  "detached": [
+    "setsid /usr/bin/lichii"
+  ],
+  "prep-cmd": [
+    {
+      "do": "",
+      "undo": "/usr/bin/lichii-stop"
+    }
+  ],
+  "image-path": "lichii.png"
+}
