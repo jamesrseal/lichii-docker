@@ -103,14 +103,3 @@ jobs:
             ${{ steps.rel.outputs.image }}:${{ steps.rel.outputs.version }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-
-      # Informational only: confirms the unpacked emulator can load its libraries and start.
-      - name: Smoke test (non-fatal)
-        if: steps.check.outputs.build == 'true'
-        continue-on-error: true
-        run: |
-          docker run --rm --entrypoint /bin/sh "${{ steps.rel.outputs.image }}:${{ steps.rel.outputs.version }}" -c '
-            cat /opt/lichii/VERSION
-            ls /opt/lichii | head -20
-            QT_QPA_PLATFORM=offscreen timeout 20 /usr/bin/lichii --version; echo "exit=$?"
-          '
