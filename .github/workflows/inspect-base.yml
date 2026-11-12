@@ -1,0 +1,31 @@
+name: Inspect base image (temporary)
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/inspect-base.yml"]
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          img=josh5/steam-headless:2
+          docker pull -q "$img"
+          docker image inspect "$img" --format 'created={{.Created}} cmd={{.Config.Cmd}}{{println}}labels={{json .Config.Labels}}{{println}}vols={{json .Config.Volumes}}'
+          docker run --rm --entrypoint /bin/sh "$img" -c '
+            sec() { echo; echo "=========== $*"; }
+            sec version; cat /version.txt 2>/dev/null | head -5
+            sec opt; find /opt/steam-headless -maxdepth 3 | head -60
+            sec usr-share; find /usr/share/steam-headless -maxdepth 2 -not -path "*flatpak-seed/*" | head -80
+            sec local-bin; ls /usr/local/bin /usr/local/libexec/steam-headless 2>/dev/null
+            sec init; cat /usr/local/bin/steam-headless-init | head -150
+            sec sunshine-wrapper; cat /usr/local/bin/steam-headless-sunshine | head -80
+            sec libexec-sunshine; head -c 9000 /usr/local/libexec/steam-headless/sunshine
+            sec apps.json; cat /usr/share/sunshine/apps.json
+            sec sunshine-unit; cat /usr/lib/systemd/system/steam-headless-sunshine.service
+            sec units; ls /usr/lib/systemd/system | grep -i -E "steam-headless|shui|sunshine"; ls /etc/systemd/system 2>/dev/null | head -30
+            sec hooks; find / -xdev \( -iname "*init.d*" -o -iname "*hook*" -o -iname "*custom*" \) -path "*steam-headless*" 2>/dev/null | head -30
+            sec grep-apps; grep -rIl "apps.json" /usr/local /usr/share/steam-headless /opt/steam-headless /usr/lib/systemd/system 2>/dev/null | grep -v flatpak-seed | head -20
+            sec desktop; ls /usr/share/wayland-sessions /usr/share/xsessions 2>/dev/null; ls /usr/bin | grep -E "^(Xwayland|kwin_wayland|plasmashell|startplasma-wayland|gamescope|labwc|sway|xdg-open|jq)$" | tr "\n" " "
+            sec qt; ls /usr/lib64 | grep -E "libxcb-cursor|libQt6Core|libvulkan.so|libfuse" | tr "\n" " "
+            sec user; grep -E "steamheadless|:1000:" /etc/passwd
+          ' 2>&1 | head -700
