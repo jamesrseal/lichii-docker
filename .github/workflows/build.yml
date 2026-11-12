@@ -1,0 +1,105 @@
+name: Build Lichii image
+
+on:
+  # Daily check for a new upstream release; only rebuilds when there is one.
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Upstream release tag to build (blank = newest)"
+        required: false
+        default: ""
+      force:
+        description: "Rebuild even if this version's image already exists"
+        type: boolean
+        default: false
+  # Changes to the image definition always rebuild.
+  push:
+    branches: [main]
+    paths: ["Dockerfile", "overlay/**", ".github/workflows/build.yml"]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build
+  cancel-in-progress: false
+
+env:
+  UPSTREAM: zortos293/Lichii
+  # Set a repository variable LICHII_ASSET to lichii-linux-x86_64-pgo.AppImage to use the PGO build.
+  ASSET: ${{ vars.LICHII_ASSET || 'lichii-linux-x86_64.AppImage' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve upstream release
+        id: rel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WANT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          # Every Lichii build is a pre-release, so /releases/latest is useless; list them instead.
+          gh api "repos/${UPSTREAM}/releases?per_page=50" > releases.json
+          if [ -n "${WANT_TAG}" ]; then
+            jq --arg t "${WANT_TAG}" '[.[] | select(.tag_name == $t)] | first' releases.json > release.json
+          else
+            jq '[.[] | select(.draft | not)] | sort_by(.published_at) | last' releases.json > release.json
+          fi
+          tag="$(jq -r '.tag_name // empty' release.json)"
+          url="$(jq -r --arg a "${ASSET}" '[.assets[]? | select(.name == $a) | .browser_download_url] | first // empty' release.json)"
+          [ -n "${tag}" ] || { echo "::error::No matching upstream release found"; exit 1; }
+          [ -n "${url}" ] || { echo "::error::Release ${tag} has no asset named ${ASSET}"; exit 1; }
+          # Docker tags allow only [A-Za-z0-9_.-] and cannot start with . or -
+          version="$(printf '%s' "${tag}" | sed -E 's/[^A-Za-z0-9_.-]+/-/g; s/^[.-]+//' | cut -c1-120)"
+          image="ghcr.io/${GITHUB_REPOSITORY,,}"
+          {
+            echo "tag=${tag}"
+            echo "url=${url}"
+            echo "version=${version}"
+            echo "image=${image}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "Upstream release: ${tag} -> ${image}:${version}" | tee -a "${GITHUB_STEP_SUMMARY}"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Check whether this version is already built
+        id: check
+        env:
+          FORCE: ${{ inputs.force || github.event_name == 'push' }}
+        run: |
+          if [ "${FORCE}" != "true" ] && docker manifest inspect "${{ steps.rel.outputs.image }}:${{ steps.rel.outputs.version }}" >/dev/null 2>&1; then
+            echo "build=false" >> "${GITHUB_OUTPUT}"
+            echo "Already built; nothing to do." | tee -a "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "build=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+        if: steps.check.outputs.build == 'true'
+
+      - name: Build and push
+        if: steps.check.outputs.build == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          pull: true
+          build-args: |
+            LICHII_TAG=${{ steps.rel.outputs.tag }}
+            LICHII_URL=${{ steps.rel.outputs.url }}
+          tags: |
+            ${{ steps.rel.outputs.image }}:latest
+            ${{ steps.rel.outputs.image }}:${{ steps.rel.outputs.version }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}

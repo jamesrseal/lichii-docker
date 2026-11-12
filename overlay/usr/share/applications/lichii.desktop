@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Lichii
+Comment=Nintendo Switch / Switch 2 emulator
+Exec=/usr/bin/lichii %f
+Icon=lichii
+Terminal=false
+Categories=Game;Emulator;

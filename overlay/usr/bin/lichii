@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Launch the unpacked Lichii AppImage on the container's Xorg display.
+export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-xcb}"
+exec /opt/lichii/AppRun "$@"
